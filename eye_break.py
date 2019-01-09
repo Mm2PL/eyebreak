@@ -4,6 +4,7 @@ import tkinter
 import tkinter.ttk
 import json
 import subprocess as sp
+
 """
 This is a program to tell you when to take a break from looking at the computer screen.
 Copyright (C) 2019 Maciej Marciniak
@@ -38,7 +39,7 @@ if __name__ != '__main__':
 
 CONFIG_DEFAULT = {
     'text_break_in': 'Next eye break in {0: >2}:{1:0>2}',
-    'text_break_now': 'Take an eye-break.',
+    'text_break_now': 'Eyebreak ends in {0: >2}:{1:0>2}',
     'text_title': '{}EyeBreak',
     'text_title_paused': '[PAUSED]',
     'text_button_pause': 'Pause',
@@ -91,6 +92,7 @@ def lock_screen():
 
 
 break_in = 0
+break_time = 0
 screen_size = (0, 0)
 
 
@@ -162,12 +164,28 @@ class App(tkinter.Frame):
         self.master.geometry('+{x:.0f}+{y:.0f}'.format(x=0, y=0))
         self.wait_for_break()
 
+    def wait_for_end_of_break(self):
+        global break_time
+        if self.paused:
+            self.after(1000, self.wait_for_break)
+            return
+        break_time -= 1
+        if break_time <= 0:
+            # break_time = config['time_break_after']
+            self.break_end()
+            return
+        self.progress_bar['value'] = break_time / config['time_break_time'] * 100
+        self.label['text'] = config['text_break_now'].format(math.floor(break_time / 60), break_time % 60)
+        self.after(1000, self.wait_for_end_of_break)
+
     def eyebreak(self):
+        global break_time
+        break_time = config['time_break_time']
         if config['option_minimize_counting_down']:
             self.master.wm_state('normal')
         self.progress_bar['value'] = 100
         self.pause_button['state'] = tkinter.DISABLED
-        self.label['text'] = config['text_break_now']
+        self.label['text'] = config['text_break_now'].format(0, 0)
         self.master.geometry('+{x:.0f}+{y:.0f}'.format(x=(self.screen_size[0] / 2
                                                           - self.winfo_width() / 2
                                                           + config['option_popup_offset'][0]),
@@ -180,13 +198,16 @@ class App(tkinter.Frame):
         self.label.focus()
         # self.master.after_idle(self.master.call, 'wm', 'attributes', '.', '-topmost', False)
         self.after(1000, lock_screen)
-        self.after(config['time_break_time'] * 1000, self.break_end)
+        self.after(1000, self.wait_for_end_of_break)
+        # self.after(config['time_break_time'] * 1000, self.break_end)
         if playsound:
-            playsound.playsound(config['sound_break_start'])
+            if os.path.isfile(config['sound_break_start']):
+                playsound.playsound(config['sound_break_start'])
 
     def break_end(self):
         if playsound:
-            playsound.playsound(config['sound_break_end'])
+            if os.path.isfile(config['sound_break_end']):
+                playsound.playsound(config['sound_break_end'])
         self.repack()
         if config['option_minimize_counting_down']:
             self.master.wm_state('iconic')
