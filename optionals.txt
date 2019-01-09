@@ -1,0 +1,2 @@
+# Use `pip3 -r optionals.txt` (or `python3 -m pip -r optionals.txt`) to install the optional modules.
+playsound
